@@ -5,18 +5,31 @@ import (
 	"flag"
 	"os"
 	"os/signal"
+	"reflect"
 	"sync"
 	"syscall"
 	"time"
 
-	starlink "rdmcguire/starlink-status/device"
+	starlink "rdmcguire/starlink-exporter/device"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 )
 
+// GRPC Timeout
 const timeout = 5
+
+// List of alerts by field name
+var alerts = []string{
+	"MotorsStuck",
+	"ThermalThrottle",
+	"ThermalShutdown",
+	"MastNotNearVertical",
+	"UnexpectedLocation",
+	"SlowEthernetSpeeds",
+	"Roaming",
+}
 
 // Setup
 var (
@@ -48,10 +61,21 @@ func init() {
 }
 
 func UpdateMetrics() {
-	log.Debug("Updating Info Metrics")
+	wg.Add(1)
+	defer wg.Done()
+
+	t1 := time.Now()
+	log.Debug("Updating Metrics")
+
+	log.Trace("Updating Info Metrics")
 	updateInfoMetrics()
-	log.Debug("Updating Status Metrics")
+	log.Trace("Updating Status Metrics")
 	updateStatusMetrics()
+	log.Trace("Updating History Metrics")
+	updateHistoryMetrics()
+
+	promDishyUpdates.Inc()
+	promDishyUpdateTime.Observe(float64(time.Now().Sub(t1).Milliseconds()))
 }
 
 // Requests GetDeviceInfo and updated relevant metrics
@@ -79,37 +103,97 @@ func updateStatusMetrics() {
 	dishStatus := status.GetDishGetStatus()
 
 	// GPS Statistics
-	var GPSValid int8
+	var GPSValid float64
 	if dishStatus.GetGpsStats().GpsValid {
 		GPSValid = 1
 	}
-	promDishyGPSValid.Set(float64(GPSValid))
+	promDishyGPSValid.Set(GPSValid)
 	promDishyGPSSats.Set(float64(dishStatus.GetGpsStats().GetGpsSats()))
 
-	// Device Booleans
-	var stuck int8
-	if dishStatus.Alerts.GetMotorsStuck() {
-		stuck = 1
+	// Currently In Outage
+	var inOutage float64
+	if dishStatus.Outage != nil {
+		inOutage = 1
 	}
-	promDishyMotorsStuck.Set(float64(stuck))
+	promDishyOutage.Set(inOutage)
 
-	var hot int8
-	if dishStatus.Alerts.GetThermalThrottle() {
-		hot = 1
+	// Current Obstructed State
+	var obstructed float64
+	if dishStatus.ObstructionStats.CurrentlyObstructed {
+		obstructed = 1
 	}
-	promDishyThermalThrottle.Set(float64(hot))
+	promDishyObstructed.Set(obstructed)
 
-	var reallyHot int8
-	if dishStatus.Alerts.GetThermalShutdown() {
-		reallyHot = 1
+	// Device Alert Booleans
+	// TODO Consider a single metric with alert name as label
+	for _, name := range alerts {
+		alert := *promDishyAlertMetrics[name]
+		alert.Set(isAlerting(dishStatus.Alerts, name))
 	}
-	promDishyThermalShutdown.Set(float64(reallyHot))
 
-	var notVert int8
-	if dishStatus.Alerts.GetMastNotNearVertical() {
-		notVert = 1
+	// Status Metrics
+	promDishyAlerts.Set(countAlerts(dishStatus.Alerts))
+	promDishyFractionObstructed.Set(float64(dishStatus.ObstructionStats.GetFractionObstructed()))
+	promDishyAvgObstructedDurationS.Set(float64(dishStatus.GetObstructionStats().GetAvgProlongedObstructionDurationS()))
+	promDishyPopPingDropRate.Set(float64(dishStatus.GetPopPingDropRate()))
+	promDishyPopPingLatencyMs.Set(float64(dishStatus.GetPopPingLatencyMs()))
+	promDishyDLTputBps.Set(float64(dishStatus.GetDownlinkThroughputBps()))
+	promDishyULTputBps.Set(float64(dishStatus.GetUplinkThroughputBps()))
+	promDishyAzimuthDeg.Set(float64(dishStatus.GetBoresightAzimuthDeg()))
+	promDishyElevationDeg.Set(float64(dishStatus.GetBoresightElevationDeg()))
+	promDishyEthSpeedMbps.Set(float64(dishStatus.GetEthSpeedMbps()))
+}
+
+// Update History Metricis
+func updateHistoryMetrics() {
+	// Fetch History Metrics
+	dishy.Request = &starlink.Request_GetHistory{}
+	history, err := getRequest()
+	if err != nil {
+		log.WithField("Error", err).Warn("Unable to GetDeviceInfo from dishy")
+		return
 	}
-	promDishyMastNotNearVertical.Set(float64(notVert))
+
+	// Outage History
+	outages := history.GetDishGetHistory().GetOutages()
+
+	// Calculate Count/Sum/Avg Outage Durations by Cause
+	durationSums := make(map[string]float64)
+	durationCounts := make(map[string]float64)
+	for _, outage := range outages {
+		durationSums[outage.GetCause().String()] += float64(outage.GetDurationNs() / 1e9)
+		durationCounts[outage.GetCause().String()]++
+	}
+	for cause, _ := range durationSums {
+		promDishyAvgOutageDuration.WithLabelValues(cause).
+			Set(durationSums[cause] / durationCounts[cause])
+		promDishySumOutageDuration.WithLabelValues(cause).
+			Set(durationSums[cause])
+		promDishyOutages.WithLabelValues(cause).
+			Set(durationCounts[cause])
+	}
+}
+
+// Returns the status of an alert as float64
+func isAlerting(a *starlink.DishAlerts, alert string) float64 {
+	var firing float64
+	r := reflect.ValueOf(a)
+	if reflect.Indirect(r).FieldByName(alert).Bool() {
+		firing = 1
+	}
+	return firing
+}
+
+// Counts the number of alerts currently activated
+func countAlerts(a *starlink.DishAlerts) float64 {
+	var firing float64
+	r := reflect.ValueOf(a)
+	for _, alert := range alerts {
+		if reflect.Indirect(r).FieldByName(alert).Bool() {
+			firing++
+		}
+	}
+	return firing
 }
 
 func main() {
@@ -134,10 +218,11 @@ func main() {
 
 	// Prepare Dishy info labels
 	dishyLabels = prometheus.Labels{
-		"id":               info.GetGetDeviceInfo().DeviceInfo.Id,
-		"country_code":     info.GetGetDeviceInfo().DeviceInfo.CountryCode,
-		"hardware_version": info.GetGetDeviceInfo().DeviceInfo.HardwareVersion,
-		"software_version": info.GetGetDeviceInfo().DeviceInfo.SoftwareVersion,
+		"id":                   info.GetGetDeviceInfo().DeviceInfo.Id,
+		"country_code":         info.GetGetDeviceInfo().DeviceInfo.CountryCode,
+		"hardware_version":     info.GetGetDeviceInfo().DeviceInfo.HardwareVersion,
+		"software_version":     info.GetGetDeviceInfo().DeviceInfo.SoftwareVersion,
+		"manufactured_version": info.GetGetDeviceInfo().DeviceInfo.ManufacturedVersion,
 	}
 
 	// Dump some stats if debug
@@ -187,33 +272,34 @@ func dumpData() {
 	// Status
 	dishy.Request = &starlink.Request_GetStatus{}
 	status, _ := getRequest()
-	log.Printf("GPS: %+v", status.GetDishGetStatus().GetGpsStats())
-	log.Printf("DishObstructed: %+v", status.GetDishGetStatus().GetObstructionStats().GetCurrentlyObstructed())
-	log.Printf("DeviceAlerts: %v", status.GetDishGetStatus().GetAlerts())
-	log.Printf("MotorsStuck: %v", status.GetDishGetStatus().Alerts.GetMotorsStuck())
-	log.Printf("ThermalThrottle: %v", status.GetDishGetStatus().Alerts.GetThermalThrottle())
-	log.Printf("ThermalShutdown: %v", status.GetDishGetStatus().Alerts.GetThermalShutdown())
-	log.Printf("PopPingDropRate: %+v", status.GetDishGetStatus().PopPingDropRate)
-	log.Printf("CurrentElevation: %+v", status.GetDishGetStatus().GetBoresightElevationDeg())
-	log.Printf("CurrentAzimuth: %+v", status.GetDishGetStatus().GetBoresightAzimuthDeg())
-	log.Printf("Outage: %+v", status.GetDishGetStatus().GetOutage())
+	log.Debugf("GPS: %+v", status.GetDishGetStatus().GetGpsStats())
+	log.Debugf("DishObstructed: %+v", status.GetDishGetStatus().GetObstructionStats().GetCurrentlyObstructed())
+	log.Debugf("DeviceAlerts: %v", status.GetDishGetStatus().GetAlerts())
+	log.Debugf("MotorsStuck: %v", status.GetDishGetStatus().Alerts.GetMotorsStuck())
+	log.Debugf("ThermalThrottle: %v", status.GetDishGetStatus().Alerts.GetThermalThrottle())
+	log.Debugf("ThermalShutdown: %v", status.GetDishGetStatus().Alerts.GetThermalShutdown())
+	log.Debugf("PopPingDropRate: %+v", status.GetDishGetStatus().PopPingDropRate)
+	log.Debugf("CurrentElevation: %+v", status.GetDishGetStatus().GetBoresightElevationDeg())
+	log.Debugf("CurrentAzimuth: %+v", status.GetDishGetStatus().GetBoresightAzimuthDeg())
+	log.Debugf("Outage: %+v", status.GetDishGetStatus().GetOutage())
 
 	// History
 	dishy.Request = &starlink.Request_GetHistory{}
 	history, _ := getRequest()
-	log.Printf("PopPingDropRateLast20: %+v", history.GetDishGetHistory().PopPingDropRate[len(history.GetDishGetHistory().PopPingDropRate)-20:])
+	log.Debugf("PopPingDropRateLast20: %+v", history.GetDishGetHistory().PopPingDropRate[len(history.GetDishGetHistory().PopPingDropRate)-20:])
 	outages := history.GetDishGetHistory().GetOutages()
-	log.Print("Last 5 Outages:")
-	for i := 1; i < 6; i++ {
-		outage := outages[len(outages)-i]
+	log.Debugf("Current %+v", history.GetDishGetHistory().GetCurrent())
+	log.Debug("Outages:")
+	for i := 0; i < len(outages); i++ {
+		outage := outages[i]
 		outageTime := time.Unix(0, outage.StartTimestampNs)
-		log.Printf("\tOutage @ %s [%ds]\tswitched:%v cause:%s", outageTime.Format("15:04:05 MST"), outage.GetDurationNs()/100000000, outage.GetDidSwitch(), outage.GetCause())
+		log.Debugf("\tOutage @ %s [%ds]\tswitched:%v cause:%s", outageTime.Format("15:04:05 MST"), outage.GetDurationNs()/100000000, outage.GetDidSwitch(), outage.GetCause())
 	}
 
 	// Config
 	dishy.Request = &starlink.Request_DishGetConfig{}
 	conf, _ := getRequest()
-	log.Printf("Config %+v", conf)
+	log.Debugf("Config %+v", conf)
 }
 
 // Generic request getter
@@ -222,8 +308,10 @@ func getRequest() (*starlink.Response, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout*time.Second)
 	defer cancel()
 
+	t1 := time.Now()
 	resp, err := client.Handle(ctx, dishy) // Make request
-	//r.Reset()                           // Reset request
+
+	promDishyGRPCTime.Observe(float64(time.Now().Sub(t1).Milliseconds()))
 
 	return resp, err
 }
