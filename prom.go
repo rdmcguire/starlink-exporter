@@ -40,8 +40,14 @@ var (
 		Namespace: "starlink",
 		Subsystem: "dishy",
 		Name:      "bootcount",
-		Help:      "Uptime of Dishy",
+		Help:      "Dishy Boot Count",
 	}, []string{"id", "hardware_version", "software_version", "manufactured_version", "country_code"})
+	promDishyUptimeS = metrics.NewGauge(prometheus.GaugeOpts{
+		Namespace: "starlink",
+		Subsystem: "dishy",
+		Name:      "uptime_s",
+		Help:      "Uptime of Dishy",
+	})
 
 	// Dishy GPS Metrics
 	promDishyGPSValid = metrics.NewGauge(prometheus.GaugeOpts{
@@ -58,49 +64,12 @@ var (
 	})
 
 	// Alerts
-	promDishyAlertMetrics map[string]*prometheus.Gauge // Accessor for alerts
-	promDishyMotorsStuck  = metrics.NewGauge(prometheus.GaugeOpts{
+	promDishyAlertStatus = metrics.NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: "starlink",
 		Subsystem: "dishy",
-		Name:      "motors_stuck",
-		Help:      "Boolean, dishy motors stuck",
-	})
-	promDishyThermalThrottle = metrics.NewGauge(prometheus.GaugeOpts{
-		Namespace: "starlink",
-		Subsystem: "dishy",
-		Name:      "thermal_throttle",
-		Help:      "Boolean, thermal throttle",
-	})
-	promDishyThermalShutdown = metrics.NewGauge(prometheus.GaugeOpts{
-		Namespace: "starlink",
-		Subsystem: "dishy",
-		Name:      "thermal_shutdown",
-		Help:      "Boolean, thermal shutdown",
-	})
-	promDishyMastNotNearVertical = metrics.NewGauge(prometheus.GaugeOpts{
-		Namespace: "starlink",
-		Subsystem: "dishy",
-		Name:      "mast_not_near_vertical",
-		Help:      "Boolean, mast not near vertical",
-	})
-	promDishyRoaming = metrics.NewGauge(prometheus.GaugeOpts{
-		Namespace: "starlink",
-		Subsystem: "dishy",
-		Name:      "roaming",
-		Help:      "Boolean, dishy is roaming",
-	})
-	promDishyUnexpectedLocation = metrics.NewGauge(prometheus.GaugeOpts{
-		Namespace: "starlink",
-		Subsystem: "dishy",
-		Name:      "unexpected_location",
-		Help:      "Boolean, dishy is in an unexpected location",
-	})
-	promDishySlowEthernet = metrics.NewGauge(prometheus.GaugeOpts{
-		Namespace: "starlink",
-		Subsystem: "dishy",
-		Name:      "slow_ethernet_speeds",
-		Help:      "Boolean, slow ethernet speeds",
-	})
+		Name:      "alert_status",
+		Help:      "Status of Alerts",
+	}, []string{"alert"})
 	promDishyObstructed = metrics.NewGauge(prometheus.GaugeOpts{
 		Namespace: "starlink",
 		Subsystem: "dishy",
@@ -111,7 +80,7 @@ var (
 		Namespace: "starlink",
 		Subsystem: "dishy",
 		Name:      "fraction_obstructed",
-		Help:      "Boolean, dishy is obstructed",
+		Help:      "Percent Obstructed",
 	})
 	promDishyAvgObstructedDurationS = metrics.NewGauge(prometheus.GaugeOpts{
 		Namespace: "starlink",
@@ -175,6 +144,13 @@ var (
 	})
 
 	// Outage Metrics
+	promDishyOutageHistogram = metrics.NewHistogram(prometheus.HistogramOpts{
+		Namespace: "starlink",
+		Subsystem: "dishy",
+		Name:      "outage_times",
+		Help:      "Histogram of outage times",
+		Buckets:   prometheus.ExponentialBucketsRange(0.25, 3600, 15),
+	})
 	promDishyOutages = metrics.NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: "starlink",
 		Subsystem: "dishy",
@@ -196,16 +172,6 @@ var (
 )
 
 func promInit() {
-	// Add Alerts to Alert Accessor
-	// TODO Consider a single metric with alert name as label
-	promDishyAlertMetrics = make(map[string]*prometheus.Gauge)
-	promDishyAlertMetrics["MotorsStuck"] = &promDishyMotorsStuck
-	promDishyAlertMetrics["ThermalThrottle"] = &promDishyThermalThrottle
-	promDishyAlertMetrics["ThermalShutdown"] = &promDishyThermalShutdown
-	promDishyAlertMetrics["MastNotNearVertical"] = &promDishyMastNotNearVertical
-	promDishyAlertMetrics["UnexpectedLocation"] = &promDishyUnexpectedLocation
-	promDishyAlertMetrics["SlowEthernetSpeeds"] = &promDishySlowEthernet
-	promDishyAlertMetrics["Roaming"] = &promDishyRoaming
 	// Serve endpoint
 	http.Handle("/metrics", promhttp.HandlerFor(prom, promhttp.HandlerOpts{}))
 	log.WithField("Listen", promAddr).Info("Prometheus Starting")

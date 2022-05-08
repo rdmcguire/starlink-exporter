@@ -41,11 +41,12 @@ var (
 
 //Shared Variables
 var (
-	client      starlink.DeviceClient                         // GRPC Connection to Dishy
-	dishy       *starlink.Request     = new(starlink.Request) // Dishy GRPC Request Provider
-	log         *logrus.Logger        = logrus.New()          // Logrus logger
-	dishyLabels prometheus.Labels
-	wg          sync.WaitGroup
+	client       starlink.DeviceClient                         // GRPC Connection to Dishy
+	dishy        *starlink.Request     = new(starlink.Request) // Dishy GRPC Request Provider
+	log          *logrus.Logger        = logrus.New()          // Logrus logger
+	dishyLabels  prometheus.Labels
+	wg           sync.WaitGroup
+	latestOutage int64
 )
 
 func init() {
@@ -92,6 +93,7 @@ func updateInfoMetrics() {
 	promDishyBootcount.With(dishyLabels).
 		Set(float64(info.GetGetDeviceInfo().DeviceInfo.Bootcount))
 }
+
 func updateStatusMetrics() {
 	// Fetch Dishy Status
 	dishy.Request = &starlink.Request_GetStatus{}
@@ -125,13 +127,13 @@ func updateStatusMetrics() {
 	promDishyObstructed.Set(obstructed)
 
 	// Device Alert Booleans
-	// TODO Consider a single metric with alert name as label
 	for _, name := range alerts {
-		alert := *promDishyAlertMetrics[name]
-		alert.Set(isAlerting(dishStatus.Alerts, name))
+		promDishyAlertStatus.WithLabelValues(name).
+			Set(isAlerting(dishStatus.Alerts, name))
 	}
 
 	// Status Metrics
+	promDishyUptimeS.Set(float64(dishStatus.GetDeviceState().GetUptimeS()))
 	promDishyAlerts.Set(countAlerts(dishStatus.Alerts))
 	promDishyFractionObstructed.Set(float64(dishStatus.ObstructionStats.GetFractionObstructed()))
 	promDishyAvgObstructedDurationS.Set(float64(dishStatus.GetObstructionStats().GetAvgProlongedObstructionDurationS()))
@@ -157,6 +159,18 @@ func updateHistoryMetrics() {
 	// Outage History
 	outages := history.GetDishGetHistory().GetOutages()
 
+	// Outage Histogram
+	// Steps backwards, observing any newly seen outages
+	for i := len(outages) - 1; i >= 0; i-- {
+		if outages[i].GetStartTimestampNs() > latestOutage {
+			promDishyOutageHistogram.Observe(float64(outages[i].GetDurationNs() / 1e9))
+		} else {
+			break
+		}
+	}
+	// Advance our latest timestamp
+	latestOutage = outages[len(outages)-1].GetStartTimestampNs()
+
 	// Calculate Count/Sum/Avg Outage Durations by Cause
 	durationSums := make(map[string]float64)
 	durationCounts := make(map[string]float64)
@@ -164,7 +178,7 @@ func updateHistoryMetrics() {
 		durationSums[outage.GetCause().String()] += float64(outage.GetDurationNs() / 1e9)
 		durationCounts[outage.GetCause().String()]++
 	}
-	for cause, _ := range durationSums {
+	for cause := range durationSums {
 		promDishyAvgOutageDuration.WithLabelValues(cause).
 			Set(durationSums[cause] / durationCounts[cause])
 		promDishySumOutageDuration.WithLabelValues(cause).
