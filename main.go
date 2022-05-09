@@ -85,7 +85,6 @@ func updateInfoMetrics() {
 	dishy.Request = &starlink.Request_GetDeviceInfo{}
 	info, err := getRequest()
 	if err != nil {
-		log.WithField("Error", err).Warn("Unable to GetDeviceInfo from dishy")
 		return
 	}
 
@@ -99,7 +98,6 @@ func updateStatusMetrics() {
 	dishy.Request = &starlink.Request_GetStatus{}
 	status, err := getRequest()
 	if err != nil {
-		log.WithField("Error", err).Warn("Unable to GetDeviceInfo from dishy")
 		return
 	}
 	dishStatus := status.GetDishGetStatus()
@@ -152,7 +150,6 @@ func updateHistoryMetrics() {
 	dishy.Request = &starlink.Request_GetHistory{}
 	history, err := getRequest()
 	if err != nil {
-		log.WithField("Error", err).Warn("Unable to GetDeviceInfo from dishy")
 		return
 	}
 
@@ -326,6 +323,19 @@ func getRequest() (*starlink.Response, error) {
 	resp, err := client.Handle(ctx, dishy) // Make request
 
 	promDishyGRPCTime.Observe(float64(time.Now().Sub(t1).Milliseconds()))
+
+	if err != nil {
+		promDishyFailing.Set(1)
+		promDishyFailures.Inc()
+		log.WithFields(logrus.Fields{
+			"Request": dishy.Request,
+			"Error":   err,
+		}).Error("Unable to request data from Dishy")
+	} else {
+		promDishyFailing.Set(0)
+	}
+
+	promDishyRequests.Inc()
 
 	return resp, err
 }

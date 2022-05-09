@@ -34,6 +34,24 @@ var (
 		Name:      "updates",
 		Help:      "Number of Dishy updates",
 	})
+	promDishyFailures = metrics.NewCounter(prometheus.CounterOpts{
+		Namespace: "starlink",
+		Subsystem: "exporter",
+		Name:      "failures",
+		Help:      "Number of Dishy request failures",
+	})
+	promDishyRequests = metrics.NewCounter(prometheus.CounterOpts{
+		Namespace: "starlink",
+		Subsystem: "exporter",
+		Name:      "requests",
+		Help:      "Number of Dishy requests",
+	})
+	promDishyFailing = metrics.NewGauge(prometheus.GaugeOpts{
+		Namespace: "starlink",
+		Subsystem: "exporter",
+		Name:      "failing",
+		Help:      "Boolean indicator if requests to Dishy are failing",
+	})
 
 	// Dishy Info Metrics
 	promDishyBootcount = metrics.NewGaugeVec(prometheus.GaugeOpts{
