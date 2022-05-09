@@ -1,0 +1,76 @@
+groups:
+- name: Starlink
+  rules:
+  - alert: Starlink Dishy Upgraded
+    expr: starlink_dishy_bootcount unless (starlink_dishy_bootcount offset 1m)
+    for: 30s
+    labels:
+      severity: warning
+      type: starlink
+    annotations:
+      descriptions: 'Dishy has been upgraded. Dishy ID: {{$labels.id}}, Software Version: {{$labels.software_version}}'
+      subject: 'Starlink Dishy Upgraded'
+  - alert: Starlink Dishy Rebooted
+    expr: sum(increase(starlink_dishy_bootcount)) by (id) > 0
+    for: 30s
+    labels:
+      severity: warning
+      type: starlink
+    annotations:
+      descriptions: 'Dishy reboots observed. Dishy ID: {{$labels.id}}, Reboots: {{$value}}'
+      subject: 'Starlink Dishy Rebooted'
+  - alert: Starlink Dishy Alerting
+    expr: starlink_dishy_alert_status > 0
+    for: 30s
+    labels:
+      severity: warning
+      type: starlink
+    annotations:
+      descriptions: 'Dishy is alerting, alert: {{ $labels.alert }}'
+      subject: 'Starlink Dishy Alerting'
+  - alert: Starlink Dishy Obstructed
+    expr: starlink_dishy_obstructed > 0
+    for: 30s
+    labels:
+      severity: warning
+      type: starlink
+    annotations:
+      descriptions: 'Dishy is obstructed'
+      subject: 'Starlink Dishy Obstructed'
+  - alert: Starlink Dishy Outage
+    expr: starlink_dishy_outage > 0
+    for: 30s
+    labels:
+      severity: major
+      type: starlink
+    annotations:
+      descriptions: 'Dishy is experiencing an outage'
+      subject: 'Starlink Dishy Outage'
+  - alert: Starlink Dishy Unreachable
+    expr: increase(starlink_exporter_failures) > 0
+    for: 30s
+    labels:
+      severity: major
+      type: starlink
+    annotations:
+      descriptions: 'Dishy is down and unreachable'
+      subject: 'Starlink Dishy Unreachable'
+  - alert: Starlink Dishy High Latency
+    expr: avg_over_time(starlink_dishy_pop_ping_latency_ms[5m]) > 100
+    for: 1m
+    labels:
+      severity: major
+      type: starlink
+    annotations:
+      descriptions: 'Dishy is reporting high latency, 5 minute average is {{$value}}ms'
+      subject: 'Starlink Dishy High Latency'
+  - alert: Starlink Dishy High Packet Loss
+    expr: avg_over_time(starlink_dishy_pop_ping_drop_rate[5m]) > .04
+    for: 1m
+    labels:
+      severity: major
+      type: starlink
+    annotations:
+      descriptions: 'Dishy is reporting high ping drops, 5 minute average ratio is {{$value}}'
+      subject: 'Starlink Dishy High Packet Loss'
+

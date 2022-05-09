@@ -4,6 +4,12 @@ Prometheus exporter for square dishy. There is at least one other starlink expor
 
 While I could have forked the starlink-community project, I wanted to make enough changes that I just compiled a new version of Dishy's GRPC protocol and build this one from scratch.
 
+## Prometheus Alerts
+
+Sample prometheus alerts have been provided in [Prometheus Alerts](prom_alerts.yml)
+
+You will want to tweak at minimum the high latency and high packet loss values for your deployment and needs.
+
 ## Grafana
 
 A dashboard is provided for use with this exporter.
