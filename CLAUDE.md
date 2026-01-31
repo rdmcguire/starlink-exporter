@@ -52,7 +52,8 @@ internal/
 
 ### Generated Code (pkg/)
 - **pkg/device/**: gRPC client stubs and proto messages for Dishy device API
-- **pkg/spacex/**: Supporting proto messages (satellites, telemetron dependencies)
+- **pkg/spacex/**: Supporting proto messages (satellites, telemetron, device services)
+- **pkg/status/**: gRPC status proto messages
 
 Generated from `proto/dish.protoset` via `contrib/regen.sh`. The protoset is a reflected descriptor set from the actual Dishy device.
 
