@@ -25,6 +25,12 @@
     },
     {
       "type": "panel",
+      "id": "gauge",
+      "name": "Gauge",
+      "version": ""
+    },
+    {
+      "type": "panel",
       "id": "heatmap",
       "name": "Heatmap",
       "version": ""
@@ -105,7 +111,7 @@
       },
       "id": 23,
       "panels": [],
-      "title": "Info and Status",
+      "title": "Device Info",
       "type": "row"
     },
     {
@@ -203,6 +209,19 @@
       "type": "table"
     },
     {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 4
+      },
+      "id": 50,
+      "panels": [],
+      "title": "Status & Alerts",
+      "type": "row"
+    },
+    {
       "datasource": {
         "type": "prometheus",
         "uid": "${DS_VICTORIAMETRICS}"
@@ -227,9 +246,9 @@
       },
       "gridPos": {
         "h": 3,
-        "w": 3,
+        "w": 2,
         "x": 0,
-        "y": 4
+        "y": 5
       },
       "id": 8,
       "options": {
@@ -278,12 +297,14 @@
             {
               "options": {
                 "0": {
+                  "color": "green",
                   "index": 0,
-                  "text": "✓"
+                  "text": "OK"
                 },
                 "1": {
+                  "color": "red",
                   "index": 1,
-                  "text": "❌"
+                  "text": "OUTAGE"
                 }
               },
               "type": "value"
@@ -293,11 +314,11 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "text",
+                "color": "green",
                 "value": null
               },
               {
-                "color": "#EAB839",
+                "color": "red",
                 "value": 1
               }
             ]
@@ -307,13 +328,13 @@
       },
       "gridPos": {
         "h": 3,
-        "w": 18,
-        "x": 3,
-        "y": 4
+        "w": 2,
+        "x": 2,
+        "y": 5
       },
-      "id": 9,
+      "id": 51,
       "options": {
-        "colorMode": "value",
+        "colorMode": "background",
         "graphMode": "none",
         "justifyMode": "auto",
         "orientation": "auto",
@@ -336,12 +357,81 @@
           "editorMode": "code",
           "exemplar": false,
           "expr": "starlink_dishy_outage",
-          "hide": false,
           "instant": false,
           "legendFormat": "Outage",
           "range": true,
-          "refId": "B"
+          "refId": "A"
+        }
+      ],
+      "title": "Outage",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_VICTORIAMETRICS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "color": "green",
+                  "index": 0,
+                  "text": "Good"
+                },
+                "1": {
+                  "color": "red",
+                  "index": 1,
+                  "text": "Low"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
         },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 2,
+        "x": 4,
+        "y": 5
+      },
+      "id": 52,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "v1.0",
+      "targets": [
         {
           "datasource": {
             "type": "prometheus",
@@ -349,35 +439,257 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "starlink_dishy_alert_status",
+          "expr": "starlink_dishy_snr_persistently_low",
           "instant": false,
-          "legendFormat": "{{alert}}",
+          "legendFormat": "SNR",
           "range": true,
           "refId": "A"
         }
       ],
-      "transformations": [
-        {
-          "id": "seriesToColumns",
-          "options": {
-            "byField": "Time"
+      "title": "SNR Status",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_VICTORIAMETRICS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "color": "green",
+                  "index": 0,
+                  "text": "Active"
+                },
+                "1": {
+                  "color": "yellow",
+                  "index": 1,
+                  "text": "Stowed"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              }
+            ]
           }
         },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 2,
+        "x": 6,
+        "y": 5
+      },
+      "id": 53,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "v1.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_VICTORIAMETRICS}"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "starlink_dishy_stow_requested",
+          "instant": false,
+          "legendFormat": "Stow",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Stow",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_VICTORIAMETRICS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "color": "green",
+                  "index": 0,
+                  "text": "Active"
+                },
+                "1": {
+                  "color": "red",
+                  "index": 1,
+                  "text": "Disabled"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 2,
+        "x": 8,
+        "y": 5
+      },
+      "id": 54,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "v1.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_VICTORIAMETRICS}"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "starlink_dishy_is_cell_disabled",
+          "instant": false,
+          "legendFormat": "Cell",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Cell Status",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_VICTORIAMETRICS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 3,
+        "x": 10,
+        "y": 5
+      },
+      "id": 55,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "class",
+          "values": false
+        },
+        "textMode": "name"
+      },
+      "pluginVersion": "v1.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_VICTORIAMETRICS}"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "starlink_dishy_mobility_class == 1",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "{{class}}",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "Mobility",
+      "transformations": [
         {
           "id": "organize",
           "options": {
-            "excludeByName": {},
-            "indexByName": {
-              "MastNotNearVertical": 8,
-              "MotorsStuck": 1,
-              "Outage": 4,
-              "Roaming": 2,
-              "SlowEthernetSpeeds": 3,
-              "ThermalShutdown": 5,
-              "ThermalThrottle": 6,
-              "Time": 0,
-              "UnexpectedLocation": 7
+            "excludeByName": {
+              "Time": true,
+              "Value": true,
+              "__name__": true,
+              "instance": true,
+              "job": true,
+              "monitor": true
             },
+            "indexByName": {},
             "renameByName": {}
           }
         }
@@ -411,8 +723,8 @@
       "gridPos": {
         "h": 3,
         "w": 3,
-        "x": 21,
-        "y": 4
+        "x": 13,
+        "y": 5
       },
       "id": 17,
       "options": {
@@ -444,8 +756,539 @@
           "refId": "A"
         }
       ],
-      "title": "Obstruction Duration",
+      "title": "Avg Obstruction",
       "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_VICTORIAMETRICS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 3,
+        "x": 16,
+        "y": 5
+      },
+      "id": 56,
+      "options": {
+        "colorMode": "none",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "v1.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_VICTORIAMETRICS}"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "starlink_dishy_time_obstructed_s",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Time Obstructed",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_VICTORIAMETRICS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 2,
+        "x": 19,
+        "y": 5
+      },
+      "id": 57,
+      "options": {
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "v1.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_VICTORIAMETRICS}"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "starlink_dishy_seconds_to_first_nonempty_slot",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "Next Slot",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_VICTORIAMETRICS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "unit": "Mbps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 3,
+        "x": 21,
+        "y": 5
+      },
+      "id": 58,
+      "options": {
+        "colorMode": "none",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "v1.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_VICTORIAMETRICS}"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "starlink_dishy_eth_speed_mbps",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Eth Speed",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_VICTORIAMETRICS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "index": 0,
+                  "text": "OK"
+                },
+                "1": {
+                  "index": 1,
+                  "text": "ALERT"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              },
+              {
+                "color": "#EAB839",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 24,
+        "x": 0,
+        "y": 8
+      },
+      "id": 9,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "v1.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_VICTORIAMETRICS}"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "starlink_dishy_alert_status",
+          "instant": false,
+          "legendFormat": "{{alert}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Alert Status",
+      "type": "stat"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 12
+      },
+      "id": 60,
+      "panels": [],
+      "title": "Software Update",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_VICTORIAMETRICS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 4,
+        "x": 0,
+        "y": 13
+      },
+      "id": 61,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "state",
+          "values": false
+        },
+        "textMode": "name"
+      },
+      "pluginVersion": "v1.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_VICTORIAMETRICS}"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "starlink_dishy_software_update_state == 1",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "{{state}}",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "Update State",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "Value": true,
+              "__name__": true,
+              "instance": true,
+              "job": true,
+              "monitor": true
+            },
+            "indexByName": {},
+            "renameByName": {}
+          }
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_VICTORIAMETRICS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "max": 1,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 0.99
+              }
+            ]
+          },
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 6,
+        "x": 4,
+        "y": 13
+      },
+      "id": 62,
+      "options": {
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
+      },
+      "pluginVersion": "v1.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_VICTORIAMETRICS}"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "starlink_dishy_software_update_progress",
+          "instant": true,
+          "legendFormat": "Progress",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "Update Progress",
+      "type": "gauge"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_VICTORIAMETRICS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds",
+            "seriesBy": "last"
+          },
+          "custom": {
+            "fillOpacity": 70,
+            "lineWidth": 0,
+            "spanNulls": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 14,
+        "x": 10,
+        "y": 13
+      },
+      "id": 63,
+      "interval": "30s",
+      "options": {
+        "alignValue": "center",
+        "legend": {
+          "displayMode": "hidden",
+          "placement": "bottom"
+        },
+        "mergeValues": true,
+        "rowHeight": 0.9,
+        "showValue": "auto",
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_VICTORIAMETRICS}"
+          },
+          "editorMode": "code",
+          "expr": "starlink_dishy_software_update_state == 1",
+          "format": "table",
+          "interval": "30s",
+          "legendFormat": "{{state}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Update State History",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": false,
+              "Value": true,
+              "__name__": true,
+              "instance": true,
+              "job": true,
+              "monitor": true
+            },
+            "indexByName": {},
+            "renameByName": {}
+          }
+        }
+      ],
+      "type": "state-timeline"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 16
+      },
+      "id": 27,
+      "panels": [],
+      "title": "Outages",
+      "type": "row"
     },
     {
       "datasource": {
@@ -474,7 +1317,7 @@
         "h": 4,
         "w": 3,
         "x": 0,
-        "y": 7
+        "y": 17
       },
       "id": 10,
       "options": {
@@ -546,7 +1389,7 @@
         "h": 4,
         "w": 10,
         "x": 3,
-        "y": 7
+        "y": 17
       },
       "id": 15,
       "interval": "30s",
@@ -613,7 +1456,7 @@
         "h": 4,
         "w": 11,
         "x": 13,
-        "y": 7
+        "y": 17
       },
       "id": 21,
       "options": {
@@ -646,19 +1489,6 @@
       ],
       "title": "Outage Time",
       "type": "stat"
-    },
-    {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 11
-      },
-      "id": 27,
-      "panels": [],
-      "title": "Outages",
-      "type": "row"
     },
     {
       "datasource": {
@@ -699,7 +1529,7 @@
         "h": 6,
         "w": 12,
         "x": 0,
-        "y": 12
+        "y": 21
       },
       "id": 29,
       "options": {
@@ -799,7 +1629,7 @@
         "h": 6,
         "w": 12,
         "x": 12,
-        "y": 12
+        "y": 21
       },
       "id": 31,
       "interval": "5m",
@@ -838,11 +1668,11 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 18
+        "y": 27
       },
       "id": 25,
       "panels": [],
-      "title": "History",
+      "title": "Throughput & Latency",
       "type": "row"
     },
     {
@@ -932,7 +1762,7 @@
         "h": 9,
         "w": 12,
         "x": 0,
-        "y": 19
+        "y": 28
       },
       "id": 4,
       "interval": "30s",
@@ -1082,7 +1912,7 @@
         "h": 9,
         "w": 12,
         "x": 12,
-        "y": 19
+        "y": 28
       },
       "id": 6,
       "options": {
@@ -1125,6 +1955,276 @@
       "type": "timeseries"
     },
     {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 37
+      },
+      "id": 70,
+      "panels": [],
+      "title": "Orientation & Alignment",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_VICTORIAMETRICS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "gradientMode": "opacity",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "degree"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Azimuth"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "blue",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Elevation"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "orange",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Tilt"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 38
+      },
+      "id": 71,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "mean"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_VICTORIAMETRICS}"
+          },
+          "editorMode": "code",
+          "expr": "starlink_dishy_boresight_azimuth_deg",
+          "legendFormat": "Azimuth",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_VICTORIAMETRICS}"
+          },
+          "editorMode": "code",
+          "expr": "starlink_dishy_boresight_elevation_deg",
+          "hide": false,
+          "legendFormat": "Elevation",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_VICTORIAMETRICS}"
+          },
+          "editorMode": "code",
+          "expr": "starlink_dishy_tilt_angle_deg",
+          "hide": false,
+          "legendFormat": "Tilt",
+          "range": true,
+          "refId": "C"
+        }
+      ],
+      "title": "Dish Orientation",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_VICTORIAMETRICS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "gradientMode": "opacity",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "area"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 5
+              },
+              {
+                "color": "red",
+                "value": 10
+              }
+            ]
+          },
+          "unit": "degree"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 38
+      },
+      "id": 72,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_VICTORIAMETRICS}"
+          },
+          "editorMode": "code",
+          "expr": "starlink_dishy_attitude_uncertainty_deg",
+          "legendFormat": "Attitude Uncertainty",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Alignment Uncertainty",
+      "type": "timeseries"
+    },
+    {
       "cards": {},
       "color": {
         "cardColor": "#b4ff00",
@@ -1142,7 +2242,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 28
+        "y": 45
       },
       "heatmap": {},
       "hideZeroBuckets": false,
@@ -1163,7 +2263,7 @@
           "refId": "A"
         }
       ],
-      "title": "Azimuth",
+      "title": "Azimuth Heatmap",
       "tooltip": {
         "show": true,
         "showHistogram": false
@@ -1197,7 +2297,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 28
+        "y": 45
       },
       "heatmap": {},
       "hideZeroBuckets": false,
@@ -1218,7 +2318,7 @@
           "refId": "A"
         }
       ],
-      "title": "Elevation",
+      "title": "Elevation Heatmap",
       "tooltip": {
         "show": true,
         "showHistogram": false
@@ -1240,11 +2340,11 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 35
+        "y": 52
       },
       "id": 43,
       "panels": [],
-      "title": "GPS",
+      "title": "GPS & Signal",
       "type": "row"
     },
     {
@@ -1359,6 +2459,67 @@
                 }
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "SNR Above Floor"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bool_yes_no"
+              },
+              {
+                "id": "custom.drawStyle",
+                "value": "line"
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 6
+              },
+              {
+                "id": "custom.showPoints",
+                "value": "never"
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 2
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "green",
+                      "value": 1
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "dash": [
+                    0,
+                    10
+                  ],
+                  "fill": "dot"
+                }
+              }
+            ]
           }
         ]
       },
@@ -1366,7 +2527,7 @@
         "h": 6,
         "w": 24,
         "x": 0,
-        "y": 36
+        "y": 53
       },
       "id": 45,
       "interval": "5m",
@@ -1404,9 +2565,21 @@
           "legendFormat": "GPS Valid",
           "range": true,
           "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_VICTORIAMETRICS}"
+          },
+          "editorMode": "code",
+          "expr": "starlink_dishy_snr_above_noise_floor",
+          "hide": false,
+          "legendFormat": "SNR Above Floor",
+          "range": true,
+          "refId": "C"
         }
       ],
-      "title": "GPS",
+      "title": "GPS & Signal Quality",
       "type": "timeseries"
     },
     {
@@ -1415,11 +2588,11 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 42
+        "y": 59
       },
       "id": 33,
       "panels": [],
-      "title": "Telemetry",
+      "title": "Exporter Telemetry",
       "type": "row"
     },
     {
@@ -1474,7 +2647,7 @@
         "h": 5,
         "w": 8,
         "x": 0,
-        "y": 43
+        "y": 60
       },
       "id": 41,
       "options": {
@@ -1628,7 +2801,7 @@
         "h": 5,
         "w": 16,
         "x": 8,
-        "y": 43
+        "y": 60
       },
       "id": 39,
       "interval": "2m",
@@ -1746,7 +2919,7 @@
         "h": 7,
         "w": 14,
         "x": 0,
-        "y": 48
+        "y": 65
       },
       "id": 35,
       "options": {
@@ -1823,7 +2996,7 @@
         "h": 7,
         "w": 10,
         "x": 14,
-        "y": 48
+        "y": 65
       },
       "id": 37,
       "options": {
@@ -1885,6 +3058,6 @@
   "timezone": "",
   "title": "Starlink",
   "uid": "IxHdG1l7z",
-  "version": 29,
+  "version": 30,
   "weekStart": ""
 }
