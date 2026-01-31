@@ -10,11 +10,12 @@ import (
 	"syscall"
 	"time"
 
-	starlink "rdmcguire/starlink-exporter/device"
+	"gitea.libretechconsulting.com/50W/starlink-exporter/pkg/device"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 // GRPC Timeout
@@ -39,11 +40,11 @@ var (
 	logLevel string = "info"               // Logging Level
 )
 
-//Shared Variables
+// Shared Variables
 var (
-	client       starlink.DeviceClient                         // GRPC Connection to Dishy
-	dishy        *starlink.Request     = new(starlink.Request) // Dishy GRPC Request Provider
-	log          *logrus.Logger        = logrus.New()          // Logrus logger
+	client       device.DeviceClient                       // GRPC Connection to Dishy
+	dishy        *device.Request     = new(device.Request) // Dishy GRPC Request Provider
+	log          *logrus.Logger      = logrus.New()        // Logrus logger
 	dishyLabels  prometheus.Labels
 	wg           sync.WaitGroup
 	latestOutage int64
@@ -76,13 +77,13 @@ func UpdateMetrics() {
 	updateHistoryMetrics()
 
 	promDishyUpdates.Inc()
-	promDishyUpdateTime.Observe(float64(time.Now().Sub(t1).Milliseconds()))
+	promDishyUpdateTime.Observe(float64(time.Since(t1).Milliseconds()))
 }
 
 // Requests GetDeviceInfo and updated relevant metrics
 func updateInfoMetrics() {
 	// Fetch DeviceInfo
-	dishy.Request = &starlink.Request_GetDeviceInfo{}
+	dishy.Request = &device.Request_GetDeviceInfo{}
 	info, err := getRequest()
 	if err != nil {
 		return
@@ -95,7 +96,7 @@ func updateInfoMetrics() {
 
 func updateStatusMetrics() {
 	// Fetch Dishy Status
-	dishy.Request = &starlink.Request_GetStatus{}
+	dishy.Request = &device.Request_GetStatus{}
 	status, err := getRequest()
 	if err != nil {
 		return
@@ -147,7 +148,7 @@ func updateStatusMetrics() {
 // Update History Metricis
 func updateHistoryMetrics() {
 	// Fetch History Metrics
-	dishy.Request = &starlink.Request_GetHistory{}
+	dishy.Request = &device.Request_GetHistory{}
 	history, err := getRequest()
 	if err != nil {
 		return
@@ -186,7 +187,7 @@ func updateHistoryMetrics() {
 }
 
 // Returns the status of an alert as float64
-func isAlerting(a *starlink.DishAlerts, alert string) float64 {
+func isAlerting(a *device.DishAlerts, alert string) float64 {
 	var firing float64
 	r := reflect.ValueOf(a)
 	if reflect.Indirect(r).FieldByName(alert).Bool() {
@@ -196,7 +197,7 @@ func isAlerting(a *starlink.DishAlerts, alert string) float64 {
 }
 
 // Counts the number of alerts currently activated
-func countAlerts(a *starlink.DishAlerts) float64 {
+func countAlerts(a *device.DishAlerts) float64 {
 	var firing float64
 	r := reflect.ValueOf(a)
 	for _, alert := range alerts {
@@ -209,13 +210,17 @@ func countAlerts(a *starlink.DishAlerts) float64 {
 
 func main() {
 	// Connect
-	ctx, cancel := context.WithTimeout(context.Background(), timeout*time.Second)
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
-	conn, err := grpc.DialContext(ctx, "192.168.100.1:9200", grpc.WithInsecure(), grpc.WithBlock())
+
+	conn, err := grpc.DialContext(ctx, "192.168.100.1:9200",
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithBlock())
 	if err != nil {
 		log.Fatalf("Failed to connect to dishy: %+v", err)
 	}
-	client = starlink.NewDeviceClient(conn)
+
+	client = device.NewDeviceClient(conn)
 	defer conn.Close()
 
 	log.Info("GRPC Connected to Dishy")
@@ -224,7 +229,7 @@ func main() {
 	go promInit()
 
 	// Get Info
-	dishy.Request = &starlink.Request_GetDeviceInfo{}
+	dishy.Request = &device.Request_GetDeviceInfo{}
 	info, _ := getRequest()
 
 	// Prepare Dishy info labels
@@ -240,10 +245,6 @@ func main() {
 	if log.IsLevelEnabled(logrus.DebugLevel) {
 		dumpData()
 	}
-
-	// Handle death
-	die := make(chan os.Signal)
-	signal.Notify(die, syscall.SIGINT, syscall.SIGTERM)
 
 	// Parse duration and create a ticker
 	duration, err := time.ParseDuration(interval)
@@ -262,26 +263,25 @@ func main() {
 	// Update forever
 	for {
 		select {
-		case <-die:
-			log.Warn("Asked to die, waiting on goroutines...")
+		case <-ctx.Done():
+			log.Warn("Asked to die, waiting on goroutines...", "reason", ctx.Err())
 			wg.Wait()
 			os.Exit(0)
 		case <-ticker.C:
 			UpdateMetrics()
 		}
 	}
-
 }
 
 // Dump some info if level is high enough
 func dumpData() {
 	// Device Info
-	dishy.Request = &starlink.Request_GetDeviceInfo{}
+	dishy.Request = &device.Request_GetDeviceInfo{}
 	info, _ := getRequest()
 	log.Printf("Info: %+v", info.GetGetDeviceInfo().DeviceInfo)
 
 	// Status
-	dishy.Request = &starlink.Request_GetStatus{}
+	dishy.Request = &device.Request_GetStatus{}
 	status, _ := getRequest()
 	log.Debugf("GPS: %+v", status.GetDishGetStatus().GetGpsStats())
 	log.Debugf("DishObstructed: %+v", status.GetDishGetStatus().GetObstructionStats().GetCurrentlyObstructed())
@@ -295,26 +295,26 @@ func dumpData() {
 	log.Debugf("Outage: %+v", status.GetDishGetStatus().GetOutage())
 
 	// History
-	dishy.Request = &starlink.Request_GetHistory{}
+	dishy.Request = &device.Request_GetHistory{}
 	history, _ := getRequest()
 	log.Debugf("PopPingDropRateLast20: %+v", history.GetDishGetHistory().PopPingDropRate[len(history.GetDishGetHistory().PopPingDropRate)-20:])
 	outages := history.GetDishGetHistory().GetOutages()
 	log.Debugf("Current %+v", history.GetDishGetHistory().GetCurrent())
 	log.Debug("Outages:")
-	for i := 0; i < len(outages); i++ {
+	for i := range outages {
 		outage := outages[i]
 		outageTime := time.Unix(0, outage.StartTimestampNs)
 		log.Debugf("\tOutage @ %s [%ds]\tswitched:%v cause:%s", outageTime.Format("15:04:05 MST"), outage.GetDurationNs()/100000000, outage.GetDidSwitch(), outage.GetCause())
 	}
 
 	// Config
-	dishy.Request = &starlink.Request_DishGetConfig{}
+	dishy.Request = &device.Request_DishGetConfig{}
 	conf, _ := getRequest()
 	log.Debugf("Config %+v", conf)
 }
 
 // Generic request getter
-func getRequest() (*starlink.Response, error) {
+func getRequest() (*device.Response, error) {
 	// Prepare request context
 	ctx, cancel := context.WithTimeout(context.Background(), timeout*time.Second)
 	defer cancel()
@@ -322,7 +322,7 @@ func getRequest() (*starlink.Response, error) {
 	t1 := time.Now()
 	resp, err := client.Handle(ctx, dishy) // Make request
 
-	promDishyGRPCTime.Observe(float64(time.Now().Sub(t1).Milliseconds()))
+	promDishyGRPCTime.Observe(float64(time.Since(t1).Milliseconds()))
 
 	if err != nil {
 		promDishyFailing.Set(1)
