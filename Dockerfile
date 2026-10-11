@@ -1,4 +1,4 @@
-FROM golang:1.25 AS build
+FROM golang:1.27 AS build
 WORKDIR /go/src/app
 ENV GO111MODULE=auto CGO_ENABLED=0
 COPY . .
